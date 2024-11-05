@@ -103,9 +103,9 @@ class EventManager:
             exc_test = self.exclusion_test(self.events[i][1], self.events[j][1])
             if not exc_test:
                 graph.add_edge(i, j)
-        # pos = nx.spring_layout(graph, k=1)
-        # nx.draw(graph, pos, node_color="cyan", node_size=1000)
-        # plt.show()
+        pos = nx.spring_layout(graph, k=1)
+        nx.draw(graph, pos, node_color="cyan", node_size=1000)
+        plt.show()
         return graph
 
     def detect_sybil_nodes(self):
@@ -337,6 +337,9 @@ class Vehicle:
 
     def report_event_to_eventmanager(self, event):
         if len(self.trajectory) >= self._ta.threshold:
+            print(
+                f"\t{BLUE}Vehicle {self.vehicle_id} sending a event{RESET} {YELLOW}{event}{RESET} {BLUE}to the event manager.{RESET}"
+            )
             self._em.report_event(event, self.trajectory)
 
 
@@ -378,14 +381,14 @@ if __name__ == "__main__":
     N_O_RSU = 10
     N_O_VEH = 4
     THRESHOLD = 3
-    em = EventManager(10)
+    em = EventManager(4)
     ta = TrustedAuthority(threshold=THRESHOLD, n_rsus=N_O_RSU)
     rsu_s = [RSU(i, ta) for i in range(0, N_O_RSU)]
     vehicles = [Vehicle(i, ta, em) for i in range(N_O_VEH)]
 
     sybil_node = SybilNode(10, ta, em)
 
-    vehicles = [*vehicles, sybil_node]
+    # vehicles = [*vehicles, sybil_node]
     adj_list_for_rsu = {
         0: [1, 2, 6],
         1: [0, 2, 5, 6],
@@ -411,6 +414,27 @@ if __name__ == "__main__":
         5: [(4, 8), (6, 7)],
         6: [(1, 6), (5, 7)],
     }
+
+    road_graph = nx.Graph()
+    for node_ind, edges in road.items():
+        for neighbour, label in edges:
+            road_graph.add_edge(node_ind, neighbour, label=label)
+
+    pos = nx.spring_layout(road_graph)
+    nx.draw(
+        road_graph,
+        pos,
+        with_labels=True,
+        node_color="lightblue",
+        node_size=1000,
+        font_size=10,
+        font_weight="bold",
+        edge_color="gray",
+    )
+
+    edge_labels = nx.get_edge_attributes(road_graph, "label")
+    nx.draw_networkx_edge_labels(road_graph, pos, edge_labels=edge_labels)
+    plt.show()
 
     startingd_points = [
         (0, 0),
@@ -452,5 +476,5 @@ if __name__ == "__main__":
             if i >= THRESHOLD:
                 vehicle.report_event_to_eventmanager("congestion")
 
-        # input("Enter for next iteration.")
+        input("\nEnter for next iteration.")
         print("\n")
