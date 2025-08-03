@@ -248,6 +248,7 @@ class RSU:
 
 
 class Vehicle:
+
     def __init__(self, vehicle_id, _ta: TrustedAuthority, _em: EventManager):
         self.vehicle_id = vehicle_id
         self.trajectory = []
@@ -344,10 +345,12 @@ class Vehicle:
 
 
 class SybilNode:
-    def __init__(self, n_o_fake_nodes, _ta: TrustedAuthority, em: EventManager):
+    def __init__(
+        self, n_o_fake_nodes, _ta: TrustedAuthority, em: EventManager, vehicle_id
+    ):
         init_index = random.randint(100, 200)
         self._ta = _ta
-        self.vehicle_id = "Sybil node"
+        self.vehicle_id = vehicle_id
         self.fake_vehicles = [
             Vehicle(init_index + i, _ta, em) for i in range(n_o_fake_nodes)
         ]
@@ -385,10 +388,36 @@ if __name__ == "__main__":
     ta = TrustedAuthority(threshold=THRESHOLD, n_rsus=N_O_RSU)
     rsu_s = [RSU(i, ta) for i in range(0, N_O_RSU)]
     vehicles = [Vehicle(i, ta, em) for i in range(N_O_VEH)]
+    basic_colors = [
+        "green",
+        "blue",
+        "cyan",
+        "yellow",
+        "orange",
+        "purple",
+        "brown",
+        "pink",
+        "violet",
+    ]
+    vehicle_colors = random.sample(basic_colors, k=N_O_VEH)
 
-    sybil_node = SybilNode(10, ta, em)
+    startingd_points = [
+        (0, 0),
+        (1, 2),
+        (2, 3),
+        (3, 5),
+    ]
+    print(
+        "\n".join(
+            f"{vehicle.vehicle_id} has {vehicle_colors[vehicle.vehicle_id]} and at {startingd_points[vehicle.vehicle_id][1]}"
+            for vehicle in vehicles
+        )
+    )
 
-    # vehicles = [*vehicles, sybil_node]
+    sybil_node = SybilNode(10, ta, em, vehicle_id=N_O_VEH)
+
+    vehicles = [*vehicles, sybil_node]
+    vehicle_colors = [*vehicle_colors, "red"]
     adj_list_for_rsu = {
         0: [1, 2, 6],
         1: [0, 2, 5, 6],
@@ -415,33 +444,6 @@ if __name__ == "__main__":
         6: [(1, 6), (5, 7)],
     }
 
-    road_graph = nx.Graph()
-    for node_ind, edges in road.items():
-        for neighbour, label in edges:
-            road_graph.add_edge(node_ind, neighbour, label=label)
-
-    pos = nx.spring_layout(road_graph)
-    nx.draw(
-        road_graph,
-        pos,
-        with_labels=True,
-        node_color="lightblue",
-        node_size=1000,
-        font_size=10,
-        font_weight="bold",
-        edge_color="gray",
-    )
-
-    edge_labels = nx.get_edge_attributes(road_graph, "label")
-    nx.draw_networkx_edge_labels(road_graph, pos, edge_labels=edge_labels)
-    plt.show()
-
-    startingd_points = [
-        (0, 0),
-        (1, 2),
-        (2, 3),
-        (3, 5),
-    ]
     sybil_node_startinng_point = 4
     sybil_node.current_position = sybil_node_startinng_point
 
@@ -450,7 +452,40 @@ if __name__ == "__main__":
 
     random.seed(10)
 
+    current_colors = list(range(len(road)))
+    road_graph = nx.Graph()
+    for node_ind, edges in road.items():
+        for neighbour, label in edges:
+            road_graph.add_edge(node_ind, neighbour, label=label)
+
+    pos = nx.spring_layout(road_graph)
+
     for i in range(THRESHOLD + 2):
+
+        for i in range(len(current_colors)):
+            current_colors[i] = "gray"
+
+        for vehicle in vehicles:
+            current_colors[vehicle.current_position] = vehicle_colors[
+                vehicle.vehicle_id
+            ]
+        actual_graph_colours = [current_colors[node] for node in road_graph]
+
+        nx.draw(
+            road_graph,
+            pos,
+            with_labels=True,
+            node_color=actual_graph_colours,
+            node_size=1000,
+            font_size=10,
+            font_weight="bold",
+            edge_color="gray",
+        )
+
+        edge_labels = nx.get_edge_attributes(road_graph, "label")
+        nx.draw_networkx_edge_labels(road_graph, pos, edge_labels=edge_labels)
+        plt.show()
+
         for vehicle in vehicles:
             curr = vehicle.current_position
             possible_moves = road[curr]
@@ -476,5 +511,5 @@ if __name__ == "__main__":
             if i >= THRESHOLD:
                 vehicle.report_event_to_eventmanager("congestion")
 
-        input("\nEnter for next iteration.")
+        # input("\nEnter for next iteration.")
         print("\n")
